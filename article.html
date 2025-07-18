@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>###H1 - smalahov.com</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="syntax.css" />
+  <style>
+    :root {
+      --bg: #f0f8ff;
+      --text: #1c2a39;
+      --subtle-text: #4a5a6a;
+      --accent: #007acc;
+      --card-bg: #ffffff;
+      --code-bg: #e6f3ff;
+      --code-highlight: #d0ebff;
+      --tip-bg: #f6fbfd;
+      --tip-border: #c4e3f3;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    header {
+      background-color: var(--accent);
+      color: white;
+      padding: 2.5rem 1rem;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.3rem;
+      margin: 0;
+    }
+
+    nav {
+      max-width: 1080px;
+      margin: 2rem auto 0;
+      padding: 0 1rem;
+    }
+
+    nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    article {
+      max-width: 1080px;
+      margin: 1.5rem auto 3rem;
+      background: var(--card-bg);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      animation: fadeIn 0.5s ease;
+      font-size: 1.1em;
+    }
+
+    article h2 {
+      color: var(--text);
+      margin-top: 2rem;
+      font-size: 1.5rem;
+    }
+
+    article p {
+      margin: 1rem 0;
+      color: var(--text);
+    }
+
+    article time {
+      font-size: 0.9rem;
+      color: var(--subtle-text);
+    }
+
+    .meta {
+      font-size: 0.9rem;
+      color: var(--subtle-text);
+      margin-bottom: 1rem;
+    }
+
+    pre {
+      background: var(--code-bg);
+      padding: 1rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 0.95rem;
+      transition: background-color 0.4s ease;
+    }
+
+    code {
+      background: var(--code-bg);
+      padding: 0.2rem 0.4rem;
+      border-radius: 5px;
+      font-family: monospace;
+    }
+
+    .tip {
+      background: var(--tip-bg);
+      border-left: 4px solid var(--tip-border);
+      padding: 1rem;
+      margin: 1.5rem 0;
+      border-radius: 8px;
+      font-style: italic;
+      color: var(--text);
+    }
+
+    .expandable {
+      margin: 1.5rem 0;
+      border-radius: 10px;
+      background: var(--code-bg);
+      overflow: hidden;
+    }
+
+    .expandable-header {
+      padding: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      background-color: var(--code-highlight);
+      user-select: none;
+    }
+
+    .expandable-content {
+      height: 0;
+      overflow: hidden;
+      transition: height 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--subtle-text);
+      padding: 3rem 1rem;
+      margin-top: 3rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .flash {
+      animation: flashHighlight 1s ease;
+    }
+
+    @keyframes flashHighlight {
+      0% { background-color: var(--code-highlight); }
+      100% { background-color: var(--code-bg); }
+    }
+  </style>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (location.hash) {
+        const el = document.querySelector(location.hash);
+        if (el) {
+          el.classList.add('flash');
+          setTimeout(() => el.classList.remove('flash'), 1000);
+        }
+      }
+    });
+
+    function toggleExpandable(header) {
+      const content = header.nextElementSibling;
+      if (content.style.height && content.style.height !== '0px') {
+        content.style.height = content.scrollHeight + 'px';
+        requestAnimationFrame(() => {
+          content.style.height = '0';
+        });
+      } else {
+        content.style.height = content.scrollHeight + 'px';
+        content.addEventListener('transitionend', function handler() {
+          content.style.height = 'auto';
+          content.removeEventListener('transitionend', handler);
+        });
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <header>
+      <h1>###H1</h1>
+  </header>
+
+  <nav>
+    <a href="index.html">&larr; Back to articles</a> |
+    <a href="###TXT">Text version</a>
+  </nav>
+
+  <article>
+    <div class="meta">
+      <time>Published: ###DATE</time> &nbsp;|&nbsp; By Sergey Malahov
+    </div>
+
+    ###CONTENT
+
+  </article>
+
+  <footer>
+      &copy; 2025 Sergey Malahov. <a href="###TXT">Text</a> is signed with <a href="###OTS">ots</a>.
+      <br>Lincensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA</a>.
+      The files in the article are available @ <a href="https://github.com/smalahov/blog">GitHub</a>
+  </footer>
+
+</body>
+</html>

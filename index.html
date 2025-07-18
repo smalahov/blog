@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>sysdive.info - System Development Insights</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #f0f8ff;
+      --text: #1c2a39;
+      --subtle-text: #4a5a6a;
+      --accent: #007acc;
+      --card-bg: #ffffff;
+      --hover-bg: #e6f3ff;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    header {
+      background-color: var(--accent);
+      color: white;
+      padding: 2.5rem 1rem;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.3rem;
+      margin: 0px;
+    }
+
+    header p {
+      font-size: 1.2rem;
+      color: #e0f0ff;
+    }
+
+    section {
+      max-width: 1080px;
+      margin: 3rem auto;
+      padding: 0 1rem;
+    }
+
+    h2 {
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 0.3rem;
+      margin-bottom: 1.5rem;
+      font-size: 1.7rem;
+    }
+
+    .article-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .article {
+      display: flex;
+      align-items: flex-start;
+      background-color: var(--card-bg);
+      padding: 1.5rem;
+      border-radius: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      transition: transform 0.2s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+    }
+
+    .article:hover {
+      background-color: var(--hover-bg);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .article-icon {
+      font-size: 2rem;
+      margin-right: 1.2rem;
+    }
+
+    .article-content h3 {
+      margin: 0;
+      font-size: 1.3rem;
+      color: var(--text);
+      transition: color 0.3s;
+    }
+
+    .article-content p {
+      margin: 0.4rem 0;
+      color: var(--subtle-text);
+    }
+
+    .article-meta {
+      font-size: 0.9rem;
+      color: var(--subtle-text);
+      margin-top: 0.4rem;
+    }
+
+    .article-meta a {
+      color: var(--accent);
+      text-decoration: none;
+      margin-left: 1rem;
+      font-weight: 500;
+    }
+
+    .article-meta a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--subtle-text);
+      padding: 3rem 1rem;
+      margin-top: 4rem;
+    }
+
+    /* Smooth appearance */
+    .article {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeInUp 0.6s ease forwards;
+    }
+
+    .article:nth-child(1) { animation-delay: 0s; }
+    .article:nth-child(2) { animation-delay: 0.1s; }
+    .article:nth-child(3) { animation-delay: 0.2s; }
+
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>// yet another dev blog</h1>
+    <!--p></p-->
+  </header>
+
+  <section>
+    <h2>About</h2>
+    <p>
+        Hi there. I'm Sergey Malahov, a software developer. This is my personal site and technical blog.
+        The articles here are born from my technical curiosity and explorations—they're not meant as tutorials or formal learning material.
+        Rather, they’re an attempt to peek under the hood and build a deeper understanding of complex topics.
+        Some posts might include incorrect assumptions or misleading conclusions.
+        <br><br>Read critically and have fun!
+    </p>
+  </section>
+
+  <section>
+    <h2>Articles</h2>
+    <div class="article-list">
+        
+        ###ARTICLES
+
+    </div>
+  </section>
+
+  <footer>
+      &copy; 2025 Sergey Malahov. Lincensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA</a><br>
+      The materials are available @ <a href="https://github.com/smalahov/blog">GitHub</a>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,458 @@
+Written by: Sergey Malahov
+Published: 7 July 2025 @ smalahov.com
+945767f90d0094aa46a15ee32ce0d643a1eda59e6d24c7cb6a1caecaa67b2cdaa47d50fbbfde941610809f2a9629e1ad731cb46d38acfd9d781ef2f8fd9a04e5
+
+Virtual methods (https://en.cppreference.com/w/cpp/language/virtual.html) in C++ are well-known and regular, but their machinery is hidden from a regular developer. Most of us write virtual methods having the documentation in mind without knowing the internals which is okay until you get curious and want some fun. So here it is.
+The aim of the article is to explore internals of C++ dynamic dispatch mechanism. The purpose, use cases and syntax details of virtual methods are out of the scope. Code examples are artificial and use simplified syntax.
+The tools used:
+-  Ubuntu clang version 18.1.3 is used to compile C++ sources, compile options '--std=c++17 -g -O0 -fomit-frame-pointer -fno-pic -static'
+-  GNU gdb (Ubuntu 15.0.50.20240403-0ubuntu1) is used to analyze assembler code and process memory
+
+[ Some basics ]
+
+A regular method call works simple: the compiler knows the object's type at compile time and can use direct static address of the method for the call. Assume we have the following code:
+
+struct Base {
+    int Sum(int a, int b) {
+        return a + b;
+    }
+};
+
+int main() {
+    Base b;
+    return b.Sum(1, 2);
+}
+
+After compilation, we can find the call to the regular method 'Sum' in assembler code of 'main':
+
+Dump of assembler code for function main():
+0x0000000000401110 <+0>: push   %rax
+0x0000000000401111 <+1>: movl   $0x0,0x4(%rsp)
+0x0000000000401119 <+9>: lea    0x3(%rsp),%rdi
+0x000000000040111e <+14>: mov    $0x1,%esi
+0x0000000000401123 <+19>: mov    $0x2,%edx
+0x0000000000401128 <+24>: call   0x401130 <_ZN4Base3SumEii>
+0x000000000040112d <+29>: pop    %rcx
+0x000000000040112e <+30>: ret
+End of assembler dump.
+
+The actual call instruction is 'call 0x401130' and its target address is static and is part of the instruction opcode, this instruction always calls the same method (same address) and may change only after recompilation of the binary. The arguments 0x01 and 0x02 are passed via '%esi' and '%edx' registers. There is one additional argument being passed to the call via '%rdi' - the address of the object, is actually passed to the method to be used as 'this' to access object non-static data. This is hidden from us for convenience when we write C++ code but under the hood 'this' is passed as a regular argument. We will need this later. Another thing to mention is the size of the objects of class 'Base':
+
+(gdb) print sizeof(Base)
+$1 = 1
+
+This is regular for an empty object (https://en.cppreference.com/w/cpp/language/ebo.html).
+Virtual method calls work a bit differently. Let's gradually dive into this magic.
+Let's modify our 'Base' making 'Sum' virtual, so the derived classes can override the logic of this method:
+
+struct Base {
+    virtual int Sum(int a, int b) {
+        return a + b;
+    }
+};
+
+struct Derived: Base {
+    int Sum(int a, int b) override {
+        return a * 2 + b;
+    }
+};
+
+int main() {
+    Derived d;
+    return d.Sum(1, 2);
+}
+
+Disassembled 'main' changes a bit but not much:
+
+Dump of assembler code for function main():
+0x0000000000401110 <+0>: sub    $0x18,%rsp
+0x0000000000401114 <+4>: movl   $0x0,0x14(%rsp)
+0x000000000040111c <+12>: lea    0x8(%rsp),%rdi
+0x0000000000401121 <+17>: call   0x401140 <_ZN7DerivedC2Ev>
+0x0000000000401126 <+22>: lea    0x8(%rsp),%rdi
+0x000000000040112b <+27>: mov    $0x1,%esi
+0x0000000000401130 <+32>: mov    $0x2,%edx
+0x0000000000401135 <+37>: call   0x401170 <_ZN7Derived3SumEii>
+0x000000000040113a <+42>: add    $0x18,%rsp
+0x000000000040113e <+46>: ret
+End of assembler dump.
+
+The call itself still uses an absolute address, so nothing has changed here. A bit unexpected but the explanation is simple: the compiler still can compute the call address during compile time, and if it can use it - why not? In fact, we create an instance of 'Derived d' and use this object (of a known type 'Derived') in the call 'd.Sum(1, 2)'. There is no reason for the compiler to do anything more than a direct call. So it does.
+But one change still can be named even in this trivial example: a new call 'call 0x401140 <_ZN7DerivedC2Ev>', and that is a call of default 'Derived' constructor. For some reason the compiler decided to insert a constructor call for the class with no data fields! It must be initializing something? Let's check the size of the 'Derived':
+
+(gdb) print sizeof(Derived)
+$1 = 8
+
+It has something in there 8 bytes length (the object is not empty anymore as empty objects have 1 byte size). And obviously, this is what gets initialized and that is why the constructor is called. Let's step into its assembler code:
+
+Dump of assembler code for function _ZN7DerivedC2Ev:
+0x0000000000401140 <+0>: sub    $0x18,%rsp
+0x0000000000401144 <+4>: mov    %rdi,0x10(%rsp)
+0x0000000000401149 <+9>: mov    0x10(%rsp),%rdi
+0x000000000040114e <+14>: mov    %rdi,0x8(%rsp)
+0x0000000000401153 <+19>: call   0x401190 <_ZN4BaseC2Ev>
+0x0000000000401158 <+24>: mov    0x8(%rsp),%rax
+0x000000000040115d <+29>: lea    0x2c5c(%rip),%rcx        # 0x403dc0 <_ZTV7Derived>
+0x0000000000401164 <+36>: add    $0x10,%rcx
+0x0000000000401168 <+40>: mov    %rcx,(%rax)
+0x000000000040116b <+43>: add    $0x18,%rsp
+0x000000000040116f <+47>: ret
+End of assembler dump.
+
+We see base constructor call 'call   0x401190 <_ZN4BaseC2Ev>' which is expected, but also the '_ZTV7Derived' symbol address stored somewhere with 'lea 0x2c5c(%rip),%rcx # 0x403dc0 <_ZTV7Derived>'. Tracking down the path of this symbol we find that:
+-  its address is stored in '%rcx' register via 'lea' instruction
+-  the value of '%rcx' (the address of '_ZTV7Derived') is increased by 0x10 (16 bytes or two 8-byte pointers);
+-  the value of '%rcx' is stored at the memory location pointed to by '%rax' using 'mov %rcx,(%rax)'
+-  in its turn '%rax' stores the value from memory at '0x8(%rsp)' - from a variable of the current stack frame ('%rsp' is stack pointer register) with 0x8 offset
+...and that is where the value from '%rdi' is stored at the beginning of the constructor call using instruction 'mov %rdi,0x8(%rsp)'. As shown above, '%rdi' is used to pass the actual object address 'this'!
+So, the strange 8-bytes hidden field of the object is initialized with some '_ZTV7Derived' address with a constant offset 0x10. We can get some info about the symbol using its address:
+
+(gdb) info symbol 0x403dc0
+vtable for Derived in section .data.rel.ro of a.out
+
+Getting clearer now, the address loaded into the hidden field inside the 'Derived' instance is the address of a record in VTable (with a small offset) created by the compiler for our class. Every object of class 'Derived' has a pointer to this record.
+
+user@host:~$ objdump -t a.out | grep _ZTV7Derived
+0000000000403dc0  w    O .data.rel.ro	0000000000000018              _ZTV7Derived
+
+The table itself has the following data inside:
+
+(gdb) x/16xg 0x403dc0
+                                      .------ VTable start for Derived
+                                      |
+0x403dc0 <_ZTV7Derived>:        0x0000000000000000      0x0000000000403de8 ------- TI pointer -----.
+                                                                                                   |
+                                      .-------- This is where the hidden field points to           |
+                                      |                                                            |
+0x403dd0 <_ZTV7Derived+16>:     0x0000000000401170      0x00007ffff7e6dd28                         |
+                                                                                                   |
+0x403de0 <_ZTI4Base+8>:         0x000000000040200d      0x00007ffff7e6ebe8 <-----------------------'
+0x403df0 <_ZTI7Derived+8>:      0x0000000000402004      0x0000000000403dd8
+0x403e00 <_ZTV4Base>:           0x0000000000000000      0x0000000000403dd8
+0x403e10 <_ZTV4Base+16>:        0x00000000004011b0      0x0000000000000001
+0x403e20:                       0x0000000000000071      0x0000000000000001
+0x403e30:                       0x0000000000000080      0x0000000000000001
+
+The value actually stored in the hidden 'Derived' instance field is '0x403dd0' (16 offset), easy to check it (after constructor exists):
+
+(gdb) print/x *(unsigned long long*)&d
+$2 = 0x403dd0
+
+So the hidden field is a VMT (virtual methods table) pointer and points to '0x401170' - the very same address that was used as static address for direct call to 'Derived::Sum' ('call 0x401170 <_ZN7Derived3SumEii>'). This means that the first record in VMT is the address of the first virtual method 'Sum'.
+Another pointer in VTable is worth mentioning: TI pointer (see the picture above), which stands for Type Information and actually points to RTTI (Run-Time Type Information) for the class
+
+[ The call ]
+
+VMT info seems redundant, why would the compiler save the address of the method (and, moreover, increase the sizes of all instances) if it can call it directly and actually does so? To find the answer, we need to modify the code a bit, changing the way we refer to the object and its methods:
+
+struct Base {
+    virtual int Sum(int a, int b) {
+        return a + b;
+    }
+};
+
+struct Derived: Base {
+    int Sum(int a, int b) override {
+        return a * 2 + b;
+    }
+};
+
+int main() {
+    Derived d;
+    Base& b = d;
+    return b.Sum(1, 2);
+}
+
+The only change made is that a reference to 'Base&' is used now to call 'Sum' method trying to fool the compiler so it doesn't know the object type. And according to the assembler code the attempt succeeded:
+
+Dump of assembler code for function main():
+0x0000000000401110 <+0>: sub    $0x18,%rsp
+0x0000000000401114 <+4>: movl   $0x0,0x14(%rsp)
+0x000000000040111c <+12>: lea    0x8(%rsp),%rdi
+0x0000000000401121 <+17>: call   0x401150 <_ZN7DerivedC2Ev>
+0x0000000000401126 <+22>: lea    0x8(%rsp),%rax
+0x000000000040112b <+27>: mov    %rax,(%rsp)
+0x000000000040112f <+31>: mov    (%rsp),%rdi
+0x0000000000401133 <+35>: mov    (%rdi),%rax
+0x0000000000401136 <+38>: mov    $0x1,%esi
+0x000000000040113b <+43>: mov    $0x2,%edx
+0x0000000000401140 <+48>: call   *(%rax)
+0x0000000000401142 <+50>: add    $0x18,%rsp
+0x0000000000401146 <+54>: ret
+End of assembler dump.
+
+There is no direct call to 'Sum' anymore, it is replaced with indirect call 'call *(%rax)'. That is, it calls whatever address is stored in dereferenced '%rax' at the moment of instruction execution. And this is the key principle of virtual method dispatch, the actual code executed as a result of such call is defined dynamically. '%rax' content at the moment of call is defined by the next operations:
+-  '%rdi' (the 'this' register) is initialized at the beginning of 'main' via 'lea 0x8(%rsp),%rdi' and retains its value
+-  '%rax' is loaded a few lines before 'call' in 'mov (%rdi),%rax' with dereferenced value of '%rdi', which means the dereferenced value of 'this' - first record in VMT for class 'Derived'
+
+(gdb) print/x $pc
+$1 = 0x401140
+(gdb) p/x $rax
+$2 = 0x403dd0
+(gdb) info symbol 0x403dd0
+vtable for Derived + 16 in section .data.rel.ro of a.out
+
+So in fact 'Derived::Sum' is called via VMT record even if its called via reference to base class 'Base', that is what virtual stuff exists for. The effective behavior of the object is defined by its actual type and not the way it is referred to. Any reference or pointer to any base sub-object works. Even in the case of the so-called diamond inheritance the mechanism will find a way to get the proper method address and call it
+To summarize:
+-  each instance of a class with virtual methods has a hidden VMT pointer to corresponding record in VMT created by the compiler at compilation time
+-  VMT has a record for each virtual method of the class with the addresses of actual method implementation. Overriding a method actually means storing its address in the class's VMT and VMTs of all descendants
+-  calls of virtual methods are indirect via VMT records of the class
+-  compiler still can use direct calls for virtual methods when possible for optimization
+
+[ Construction and destruction ]
+
+Previously in the assembler code for 'Derived' constructor, 'Base' constructor was called. What is important is that this call is done before 'Derived' class sets up its VMT pointer. This is because 'Base' wants to setup its own VMT pointer to its own VMT so 'Base' class instances (created directly using 'Base' constructor) use Base virtual methods:
+
+
+Dump of assembler code for function _ZN4BaseC2Ev:
+0x0000000000401180 <+0>: mov    %rdi,-0x8(%rsp)
+0x0000000000401185 <+5>: mov    -0x8(%rsp),%rax
+0x000000000040118a <+10>: lea    0x2c6f(%rip),%rcx        # 0x403e00 <_ZTV4Base>
+0x0000000000401191 <+17>: add    $0x10,%rcx
+0x0000000000401195 <+21>: mov    %rcx,(%rax)
+0x0000000000401198 <+24>: ret
+End of assembler dump.
+
+'Base' constructor uses the same mechanism 'Derived' does (as shown before) to set up its VMT pointer. What about destruction? Same but in the opposite direction. To illustrate this, the code needs to be modified a bit to force the compiler to call the destructors. Additionally, call to virtual 'Sum' is added into the destructors to force the compiler to add some virtual-related code there:
+
+struct Base {
+    virtual int Sum(int a, int b) {
+        return a + b;
+    }
+
+    ~Base() {
+        Sum(1,1);
+    }
+};
+
+struct Derived: Base {
+    int Sum(int a, int b) override {
+        return a * 2 + b;
+    }
+
+    ~Derived() {
+        Sum(1,1);
+    }
+};
+
+int main() {
+    Derived d;
+    return d.Sum(1, 2);
+}
+
+Compacted asm code for 'Derived' destructor:
+
+Dump of assembler code for function _ZN7DerivedD2Ev:
+ . . .
+0x0000000000401233 <+19>: lea    0x2b56(%rip),%rax        # 0x403d90 <_ZTV7Derived+16>
+0x000000000040123a <+26>: mov    %rax,(%rdi)
+ . . .
+0x0000000000401243 <+35>: mov    $0x1,%edx
+0x0000000000401248 <+40>: mov    %edx,%esi
+0x000000000040124a <+42>: call   *%rax
+ . . .
+0x0000000000401256 <+54>: call   0x4012c0 <_ZN4BaseD2Ev>
+ . . .
+End of assembler dump.
+
+For 'Base' class:
+
+Dump of assembler code for function _ZN4BaseD2Ev:
+ . . .
+0x00000000004012c9 <+9>: lea    0x2b00(%rip),%rax        # 0x403dd0 <_ZTV4Base+16>
+0x00000000004012d0 <+16>: mov    %rax,(%rdi)
+ . . .
+0x00000000004012d9 <+25>: mov    $0x1,%edx
+0x00000000004012de <+30>: mov    %edx,%esi
+0x00000000004012e0 <+32>: call   *%rax
+ . . .
+End of assembler dump.
+
+A common pattern here, similar to what we have seen in constructors: each destructors reloads object's VMT pointer according to its class. This fact leads us to an important conclusion: construction and destruction code is always executed in the context of current class's VMT address (and not the most derived (https://www.en.cppreference.com/w/cpp/language/objects.html#Subobjects)). A kind of a lifeline of the object's VMT pointer can be drawn as that:
+
+Method     | <-- Creation --> | <-- Object usage --> | <-- Destruction --> |   VMT pointer
+           |  Base  | Derived |                      |  Derived  |  Base   |
+                              .                      .
+Base        ────────┐         .                      .           ┌─────────   <_ZTV4Base+16>`
+virtual             │         .                      .           │
+                    │         .                      .           │
+Derived             └────────────────────────────────────────────┘            <_ZTV7Derived+16>
+override                      .                      .
+
+This may seem a bit strange at first glance and still makes sense: imagine 'Base::~Base()' using VMT pointer of 'Derived'. Calls to virtual methods during destruction would call overridden implementations ('Derived::Sum()' for example). But overridden methods of 'Derived' were written supposing that all the 'Derived' resources (variables, dynamically allocated memory or whatever was created in 'Derived' constructor) are available. But this is not true during 'Base' destructor execution as it is executed after 'Derived' destructor (that could have destroyed something required for normal execution of 'Derived' methods)! So the only safe way for 'Base' destructor to execute virtual methods is to execute its own implementations (or any of its parents, their destruction code is not executed yet). And that is what is done via VMT pointer manipulations. Same logic applies to the constructors but in the opposite direction: 'Base' constructor just can't safely call 'Derived' implementations as 'Derived' data may not be ready by that time. More explanation  here (https://isocpp.org/wiki/faq/strange-inheritance#calling-virtuals-from-ctors).
+Btw, this doesn't completely disable the virtual mechanism during construction or destruction, in the code above the calls to 'Sum()' are still indirect using value from VMT. If we had a virtual method in 'Base' that was not overridden in 'Derived', 'Derived' destructor would call 'Base' implementation of the method via VMT. This guarantees that the most appropriate and at the same time safe overridden version is called. We can say that during these special periods of the object's lifetime we use limited virtual calls, not deeper than the current sub-object's class being constructed/destructed.
+ This VMT manipulation may cause abstract method (if any) calls during construction or destruction. Oups...
+
+[ Not only about call address ]
+
+Ok, now we understand a bit more about how the appropriate code is selected to be executed on a virtual call. But what's about 'this' for that call? Does the pointer to the object need to be somehow adjusted? Let's take a look at the following code example:
+
+struct Base {
+    long long A = 0x0B0;
+    virtual int Sum(int a) {
+        return A + a;
+    }
+};
+
+struct Derived: Base {
+    long long B = 0x0D0;
+};
+
+struct MoreDerived: Derived {
+    long long C = 0x0D1;
+
+    int Sum(int a) override {
+        return A + B + C + a;
+    }
+};
+
+int main() {
+    return 0;
+}
+
+Here is how memory layout of 'MoreDerived' will look like:
+
+.----------------------------------------------------------.
+| MoreDerived::VMT | Base::A | Derived::B | MoreDerived::C |
+'----------------------------------------------------------'
+^                  ^         ^            ^
+this               this+8    this+16      this+24
+
+After creation of an instance of 'MoreDerived' the pointer 'this' points at the beginning of the object memory layout. This pointer is suitable for all methods declared in 'MoreDerived' because 'MoreDerived' methods were generated by the compiler keeping in mind the offsets of A, B, C which never change for all objects of type 'MoreDerived'. The same 'this' value is suitable for all methods declared in 'Derived', because 'Derived' layout is also known at compilation time and is part of 'MoreDerived' layout (it is a sub-object of the most derived object of class 'MoreDerived'). If we decided to create an instance of 'Derived', we would get the next layout:
+
+.-----------------------------------------.
+| Derived::VMT     | Base::A | Derived::B |
+'-----------------------------------------'
+^                  ^         ^
+this               this+8    this+16
+
+Obviously the offset of 'Base::A' and 'Derived::B' fields are the same for both layout mentioned above. It's a result of the strict layout rules of non-static data fields inside objects/sub-objects: for every given class ('MoreDerived'), all parent's classes ('Base', 'Derived') fields are located strictly before the classes fields ('&Base::A < &MoreDerived::C', '&Derived::B < &MoreDerived::C', '&Base::A < &Derived::B'). So wherever sub-object of class 'MoreDerived' is met in any object memory layout of any descendant of 'MoreDerived', it's field guaranteed to be prepended by the parents data fields with the same offsets in the same order. The same 'this' in this case fits to call any method of the class and base classes. Trivial but must be mentioned.
+
+The picture changes significantly when we have multiple inheritance. Assume we have the following code:
+
+struct Base1 {
+    long int B1 = 0xB1;
+    virtual long int Sum1(int a) {
+        return B1 + a;
+    }
+};
+
+struct Base2 {
+    long int B2 = 0xB2;
+    virtual long int Sum2(int a) {
+        return B2 + a;
+    }
+};
+
+struct Derived: Base1, Base2 {
+    long int D = 0x0D0;
+    long int Sum2(int a) override {
+        return D + B2 + a;
+    }
+};
+
+int main() {
+    Derived d;
+    Base2& db = d;
+    return d.Sum2(1) + db.Sum2(2);
+}
+
+Applying the described above to the layout of class 'Derived' is not possible anymore; the 'this' pointer is not common in this case. Let's review memory layouts of the classes:
+
+Derived
+.---------------------------------------------------.
+| Derived::VMT | Base1::B1 | Base2::B2 | Derived::D |
+'---------------------------------------------------'
+^                ^           ^           ^
+this             this+8      this+16     this+24
+
+Base1
+.------------------------.
+| Base1::VMT | Base1::B1 |
+'------------------------'
+^              ^
+this           this+8
+
+Base2
+.------------------------.
+| Base2::VMT | Base2::B2 |
+'------------------------'
+^              ^
+this           this+8
+
+Here the field 'Base2::B2' in 'Derived' layout has offset 16 while the same field in 'Base2' layout has offset 8, which means that casting 'Derived' to 'Base2' will have to change 'this' to be able to call 'Base2' methods properly. And it does change:
+
+(gdb) p/x &d
+$1 = 0x7fffffffdcb8
+(gdb) p/x &db
+$2 = 0x7fffffffdcc8
+
+According to what we know so far about virtual calls, the code above cannot work properly. The line 'return d.Sum2(1) + db.Sum2(2)' calls the same implementation of 'Sum2' (overridden in 'Derived') but uses different 'this'.
+Let's figure this out. 'd' memory layout:
+
+(gdb) x/8xg &d
+0x7fffffffdcb8: 0x0000000000403d68      0x00000000000000b1
+0x7fffffffdcc8: 0x0000000000403d88      0x00000000000000b2
+0x7fffffffdcd8: 0x00000000000000d0      0x00000000ffffdd80
+0x7fffffffdce8: 0x00007ffff782a1ca      0x0000000000000008
+(gdb) p sizeof(d)
+$2 = 40
+(gdb)
+
+Here the data fields with values 0xb1, 0xb2 and 0xd0 are in their expected places, VMT pointer '0x0000000000403d68' in the begin of the layout as expected, but also an unexpected value '0x0000000000403d88' that precedes 'Base2' field 0xb2:
+
+(gdb) info symbol 0x0000000000403d88
+vtable for Derived + 48 in section .data.rel.ro of a.out
+
+This unexpected value is also a vtable pointer pointing somewhere in 'Derived' vtable. And this is the beginning of the 'Base2' memory layout inside 'Derived' memory layout (see address):
+
+(gdb) p/x &db
+$6 = 0x7fffffffdcc8
+
+So value stored at '0x7fffffffdcc8' will be used as VMT pointer when calling virtual methods of 'Base2', redirecting the calls to the real method implementation in 'Derived'. Very similar to what we have seen before but... the 'Base2' sub-object has its own VMT pointer!
+Moving along, examining the pointer:
+
+(gdb) x/xg 0x0000000000403d88
+0x403d88 <_ZTV7Derived+48>:     0x0000000000401270
+(gdb) x/xg 0x0000000000401270
+0x401270 <_ZThn16_N7Derived4Sum2Ei>:    0x247489f8247c8948
+(gdb) info symbol 0x0000000000401270
+non-virtual thunk to Derived::Sum2(int) in section .text of a.out
+
+This is the so-called 'thunk', a piece of code that adjusts 'this' pointer to a proper value for the virtual call:
+
+(gdb) disassemble 0x0000000000401270
+Dump of assembler code for function _ZThn16_N7Derived4Sum2Ei:
+0x0000000000401270 <+0>:     mov    %rdi,-0x8(%rsp)
+0x0000000000401275 <+5>:     mov    %esi,-0xc(%rsp)
+0x0000000000401279 <+9>:     mov    -0x8(%rsp),%rdi
+0x000000000040127e <+14>:    add    $0xfffffffffffffff0,%rdi
+0x0000000000401282 <+18>:    mov    -0xc(%rsp),%esi
+0x0000000000401286 <+22>:    jmp    0x4011d0 <_ZN7Derived4Sum2Ei>
+End of assembler dump.
+
+Since the address of this piece of code is stored in VMT, it is called instead of actual method. After the adjustment is done the overridden 'Derived' method 'Sum2' is called using 'jmp 0x4011d0 <_ZN7Derived4Sum2Ei>'.
+The adjustment is done in 'add $0xfffffffffffffff0,%rdi', which means that '%rdi' ('this') is shifted -16 bytes:
+
+(gdb) p (long long)0xfffffffffffffff0
+$10 = -16
+
+And that is exactly the distance between the actual 'Derived' object's 'this' and 'Base2' sub-object (see memory layout above)! If we take a closer look at 'Derived' VMT we can notice that the same method 'Sum2' has actually 2 records there:
+
+(gdb) x/8xg 0x0000000000403d68
+                                .---- VMT for Sum1      .---- VMT for Sum2
+                                |                       |
+0x403d68 <_ZTV7Derived+16>:     0x0000000000401250      0x00000000004011d0
+0x403d78 <_ZTV7Derived+32>:     0xfffffffffffffff0      0x0000000000403db0
+                                .---- thunk for Sum2
+                                |
+0x403d88 <_ZTV7Derived+48>:     0x0000000000401270      0x00007ffff7e6dd28
+0x403d98 <_ZTI5Base1+8>:        0x000000000040200d      0x00007ffff7e6dd28
+
+One of the records points directly to 'Derived::Sum2' implementation at '0x00000000004011d0', another one points to the thunk '0x0000000000401270' which after 'this' adjustment calls the same 'Derived::Sum2' implementation at the same address ('jmp 0x4011d0 <_ZN7Derived4Sum2Ei>'). Same call of the same address, one is done directly while the other after some preparations.
+This way C++ compiler prepares for a virtual call and guarantees that:
+It doesn't matter where in classes hierarchy the implementation of a virtual method is located, and how the object is referred to, the call will always receive the correct 'this' value.
+
+[ Conclusion ]
+
+Virtuals are fun... and more is to come!
