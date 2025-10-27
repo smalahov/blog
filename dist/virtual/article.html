@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=g-d16d114596"></script>
+  <script>
+      window.datalayer = window.datalayer || [];
+      function gtag(){datalayer.push(arguments);}
+      gtag('js', new date());
+
+      gtag('config', 'g-d16d114596');
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Virtual methods in C++ - smalahov.com</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../syntax.css" />
+  <style>
+    :root {
+      --bg: #f0f8ff;
+      --text: #1c2a39;
+      --subtle-text: #4a5a6a;
+      --accent: #007acc;
+      --card-bg: #ffffff;
+      --code-bg: #e6f3ff;
+      --code-highlight: #d0ebff;
+      --tip-bg: #f6fbfd;
+      --tip-border: #c4e3f3;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    header {
+      background-color: var(--accent);
+      color: white;
+      padding: 2.5rem 1rem;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.3rem;
+      margin: 0;
+    }
+
+    nav {
+      max-width: 1080px;
+      margin: 2rem auto 0;
+      padding: 0 1rem;
+    }
+
+    nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    article {
+      max-width: 1080px;
+      margin: 1.5rem auto 3rem;
+      background: var(--card-bg);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      animation: fadeIn 0.5s ease;
+      font-size: 1.1em;
+    }
+
+    article h2 {
+      color: var(--text);
+      margin-top: 2rem;
+      font-size: 1.5rem;
+    }
+
+    article p {
+      margin: 1rem 0;
+      color: var(--text);
+    }
+
+    article time {
+      font-size: 0.9rem;
+      color: var(--subtle-text);
+    }
+
+    .meta {
+      font-size: 0.9rem;
+      color: var(--subtle-text);
+      margin-bottom: 1rem;
+    }
+
+    pre {
+      background: var(--code-bg);
+      padding: 1rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 0.95rem;
+      transition: background-color 0.4s ease;
+    }
+
+    code {
+      background: var(--code-bg);
+      padding: 0.2rem 0.4rem;
+      border-radius: 5px;
+      font-family: monospace;
+    }
+
+    .imgdiv {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 40px;
+    }
+
+    img {
+        max-width: 100%; /* Limits the image width to the width of the container */
+        max-height: 100%; /* Limits the image height to the height of the container */
+        width: auto; /* Keeps the aspect ratio intact */
+        height: auto; /* Keeps the aspect ratio intact */
+    }
+
+    .tip {
+      background: var(--tip-bg);
+      border-left: 4px solid var(--tip-border);
+      padding: 1rem;
+      margin: 1.5rem 0;
+      border-radius: 8px;
+      font-style: italic;
+      color: var(--text);
+    }
+
+    .expandable {
+      margin: 1.5rem 0;
+      border-radius: 10px;
+      background: var(--code-bg);
+      overflow: hidden;
+    }
+
+    .expandable-header {
+      padding: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      background-color: var(--code-highlight);
+      user-select: none;
+    }
+
+    .expandable-content {
+      height: 0;
+      overflow: hidden;
+      transition: height 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--subtle-text);
+      padding: 3rem 1rem;
+      margin-top: 3rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .flash {
+      animation: flashHighlight 1s ease;
+    }
+
+    @keyframes flashHighlight {
+      0% { background-color: var(--code-highlight); }
+      100% { background-color: var(--code-bg); }
+    }
+  </style>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (location.hash) {
+        const el = document.querySelector(location.hash);
+        if (el) {
+          el.classList.add('flash');
+          setTimeout(() => el.classList.remove('flash'), 1000);
+        }
+      }
+    });
+
+    function toggleExpandable(header) {
+      const content = header.nextElementSibling;
+      if (content.style.height && content.style.height !== '0px') {
+        content.style.height = content.scrollHeight + 'px';
+        requestAnimationFrame(() => {
+          content.style.height = '0';
+        });
+      } else {
+        content.style.height = content.scrollHeight + 'px';
+        content.addEventListener('transitionend', function handler() {
+          content.style.height = 'auto';
+          content.removeEventListener('transitionend', handler);
+        });
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <header>
+      <h1>Virtual methods in C++</h1>
+  </header>
+
+  <nav>
+    <a href="../index.html">&larr; Back to articles</a> |
+    <a href="article.txt">Text version</a>
+  </nav>
+
+  <article>
+    <div class="meta">
+      <time>Published: 7 July 2025</time> &nbsp;|&nbsp; By Sergey Malahov
+    </div>
+
+    <p><a href='https://en.cppreference.com/w/cpp/language/virtual.html'>Virtual methods</a> in C++ are well-known and regular, but their machinery is hidden from a regular developer. Most of us write virtual methods having the documentation in mind without knowing the internals which is okay until you get curious and want some fun. So here it is.</p>
+<div class="tip">The aim of the article is to explore internals of C++ dynamic dispatch mechanism. The purpose, use cases and syntax details of virtual methods are out of the scope. Code examples are artificial and use simplified syntax.</div>
+<p>The tools used:</p>
+<ul><li> Ubuntu clang version 18.1.3 is used to compile C++ sources, compile options <code>--std=c++17 -g -O0 -fomit-frame-pointer -fno-pic -static</code></li>
+<li> GNU gdb (Ubuntu 15.0.50.20240403-0ubuntu1) is used to analyze assembler code and process memory</li>
+</ul><h2>Some basics</h2>
+<p>A regular method call works simple: the compiler knows the object's type at compile time and can use direct static address of the method for the call. Assume we have the following code:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">simple_call.cpp</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">Base</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">Base</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">Sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>After compilation, we can find the call to the regular method <code>Sum</code> in assembler code of <code>main</code>:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">asm</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="nf">Dump</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">code</span><span class="w"> </span><span class="nv">for</span><span class="w"> </span><span class="nv">function</span><span class="w"> </span><span class="nv">main</span><span class="p">():</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401110</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">push</span><span class="w">   </span><span class="o">%</span><span class="nb">rax</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401111</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">1</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">movl</span><span class="w">   </span><span class="kc">$</span><span class="mh">0x0</span><span class="p">,</span><span class="mh">0x4</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401119</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">9</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">lea</span><span class="w">    </span><span class="mh">0x3</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">rdi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040111e</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">14</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x1</span><span class="p">,</span><span class="o">%</span><span class="nb">esi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401123</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">19</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x2</span><span class="p">,</span><span class="o">%</span><span class="nb">edx</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401128</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">24</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">call</span><span class="w">   </span><span class="mh">0x401130</span><span class="w"> </span><span class="o">&lt;</span><span class="nv">_ZN4Base3SumEii</span><span class="o">&gt;</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040112d</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">29</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">pop</span><span class="w">    </span><span class="o">%</span><span class="nb">rcx</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040112e</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">30</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">ret</span><span class="w"></span>
+<span class="nf">End</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">dump.</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>The actual call instruction is <code>call 0x401130</code> and its target address is static and is part of the instruction opcode, this instruction always calls the same method (same address) and may change only after recompilation of the binary. The arguments 0x01 and 0x02 are passed via <code>%esi</code> and <code>%edx</code> registers. There is one additional argument being passed to the call via <code>%rdi</code> - the address of the object, is actually passed to the method to be used as <code>this</code> to access object non-static data. This is hidden from us for convenience when we write C++ code but under the hood <code>this</code> is passed as a regular argument. We will need this later. Another thing to mention is the size of the objects of class <code>Base</code>:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) print sizeof(Base)
+$1 = 1
+</pre></div>
+</div></div>
+<p>This is regular for an <a href='https://en.cppreference.com/w/cpp/language/ebo.html'>empty object</a>.</p>
+<p>Virtual method calls work a bit differently. Let's gradually dive into this magic.</p>
+<p>Let's modify our <code>Base</code> making <code>Sum</code> virtual, so the derived classes can override the logic of this method:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">virtual_call.cpp</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">Base</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">Derived</span><span class="o">:</span><span class="w"> </span><span class="n">Base</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">Derived</span><span class="w"> </span><span class="n">d</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="n">Sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>Disassembled <code>main</code> changes a bit but not much:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">asm</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="nf">Dump</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">code</span><span class="w"> </span><span class="nv">for</span><span class="w"> </span><span class="nv">function</span><span class="w"> </span><span class="nv">main</span><span class="p">():</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401110</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">sub</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x18</span><span class="p">,</span><span class="o">%</span><span class="nb">rsp</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401114</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">4</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">movl</span><span class="w">   </span><span class="kc">$</span><span class="mh">0x0</span><span class="p">,</span><span class="mh">0x14</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040111c</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">12</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">lea</span><span class="w">    </span><span class="mh">0x8</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">rdi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401121</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">17</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">call</span><span class="w">   </span><span class="mh">0x401140</span><span class="w"> </span><span class="o">&lt;</span><span class="nv">_ZN7DerivedC2Ev</span><span class="o">&gt;</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401126</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">22</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">lea</span><span class="w">    </span><span class="mh">0x8</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">rdi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040112b</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">27</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x1</span><span class="p">,</span><span class="o">%</span><span class="nb">esi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401130</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">32</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x2</span><span class="p">,</span><span class="o">%</span><span class="nb">edx</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401135</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">37</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">call</span><span class="w">   </span><span class="mh">0x401170</span><span class="w"> </span><span class="o">&lt;</span><span class="nv">_ZN7Derived3SumEii</span><span class="o">&gt;</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040113a</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">42</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">add</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x18</span><span class="p">,</span><span class="o">%</span><span class="nb">rsp</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040113e</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">46</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">ret</span><span class="w"></span>
+<span class="nf">End</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">dump.</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>The call itself still uses an absolute address, so nothing has changed here. A bit unexpected but the explanation is simple: the compiler still can compute the call address during compile time, and if it can use it - why not? In fact, we create an instance of <code>Derived d</code> and use this object (of a <b>known type</b> <code>Derived</code>) in the call <code>d.Sum(1, 2)</code>. There is no reason for the compiler to do anything more than a direct call. So it does.</p>
+<p>But one change still can be named even in this trivial example: a new call <code>call 0x401140 <_ZN7DerivedC2Ev></code>, and that is a call of default <code>Derived</code> constructor. For some reason the compiler decided to insert a constructor call for the class with no data fields! It must be initializing something? Let's check the size of the <code>Derived</code>:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) print sizeof(Derived)
+$1 = 8
+</pre></div>
+</div></div>
+<p>It has something in there 8 bytes length (the object is not empty anymore as empty objects have 1 byte size). And obviously, this is what gets initialized and that is why the constructor is called. Let's step into its assembler code:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">asm</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="nf">Dump</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">code</span><span class="w"> </span><span class="nv">for</span><span class="w"> </span><span class="nv">function</span><span class="w"> </span><span class="nv">_ZN7DerivedC2Ev</span><span class="p">:</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401140</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">sub</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x18</span><span class="p">,</span><span class="o">%</span><span class="nb">rsp</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401144</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">4</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">rdi</span><span class="p">,</span><span class="mh">0x10</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401149</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">9</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="mh">0x10</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">rdi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040114e</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">14</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">rdi</span><span class="p">,</span><span class="mh">0x8</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401153</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">19</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">call</span><span class="w">   </span><span class="mh">0x401190</span><span class="w"> </span><span class="o">&lt;</span><span class="nv">_ZN4BaseC2Ev</span><span class="o">&gt;</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401158</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">24</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="mh">0x8</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">rax</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040115d</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">29</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">lea</span><span class="w">    </span><span class="mh">0x2c5c</span><span class="p">(</span><span class="o">%</span><span class="nv">rip</span><span class="p">),</span><span class="o">%</span><span class="nb">rcx</span><span class="w">        </span><span class="c1"># 0x403dc0 &lt;_ZTV7Derived&gt;</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401164</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">36</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">add</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x10</span><span class="p">,</span><span class="o">%</span><span class="nb">rcx</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401168</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">40</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">rcx</span><span class="p">,(</span><span class="o">%</span><span class="nb">rax</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040116b</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">43</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">add</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x18</span><span class="p">,</span><span class="o">%</span><span class="nb">rsp</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040116f</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">47</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">ret</span><span class="w"></span>
+<span class="nf">End</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">dump.</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>We see base constructor call <code>call   0x401190 <_ZN4BaseC2Ev></code> which is expected, but also the <code>_ZTV7Derived</code> symbol address stored somewhere with <code>lea 0x2c5c(%rip),%rcx # 0x403dc0 <_ZTV7Derived></code>. Tracking down the path of this symbol we find that:</p>
+<ul><li> its address is stored in <code>%rcx</code> register via <code>lea</code> instruction</li>
+<li> the value of <code>%rcx</code> (the address of <code>_ZTV7Derived</code>) is increased by 0x10 (16 bytes or two 8-byte pointers);</li>
+<li> the value of <code>%rcx</code> is stored at the memory location pointed to by <code>%rax</code> using <code>mov %rcx,(%rax)</code></li>
+<li> in its turn <code>%rax</code> stores the value from memory at <code>0x8(%rsp)</code> - from a variable of the current stack frame (<code>%rsp</code> is stack pointer register) with 0x8 offset</li>
+</ul><p>...and that is where the value from <code>%rdi</code> is stored at the beginning of the constructor call using instruction <code>mov %rdi,0x8(%rsp)</code>. As shown above, <code>%rdi</code> is used to pass the actual object address <code>this</code>!</p>
+<p>So, the strange 8-bytes hidden field of the object is initialized with some <code>_ZTV7Derived</code> address with a constant offset 0x10. We can get some info about the symbol using its address:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) info symbol 0x403dc0
+vtable for Derived in section .data.rel.ro of a.out
+</pre></div>
+</div></div>
+<p>Getting clearer now, the address loaded into the hidden field inside the <code>Derived</code> instance is the address of a record in <b>VTable</b> (with a small offset) created by the compiler for our class. Every object of class <code>Derived</code> has a pointer to this record.</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">bash</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>user@host:~$ objdump -t a.out | grep _ZTV7Derived
+0000000000403dc0  w    O .data.rel.ro	0000000000000018              _ZTV7Derived
+</pre></div>
+</div></div>
+<p>The table itself has the following data inside:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) x/16xg 0x403dc0
+                                      .------ VTable start for Derived
+                                      |
+0x403dc0 &lt;_ZTV7Derived&gt;:        0x0000000000000000      0x0000000000403de8 ------- TI pointer -----.
+                                                                                                   |
+                                      .-------- This is where the hidden field points to           |
+                                      |                                                            |
+0x403dd0 &lt;_ZTV7Derived+16&gt;:     0x0000000000401170      0x00007ffff7e6dd28                         |
+                                                                                                   |
+0x403de0 &lt;_ZTI4Base+8&gt;:         0x000000000040200d      0x00007ffff7e6ebe8 &lt;-----------------------&#39;
+0x403df0 &lt;_ZTI7Derived+8&gt;:      0x0000000000402004      0x0000000000403dd8
+0x403e00 &lt;_ZTV4Base&gt;:           0x0000000000000000      0x0000000000403dd8
+0x403e10 &lt;_ZTV4Base+16&gt;:        0x00000000004011b0      0x0000000000000001
+0x403e20:                       0x0000000000000071      0x0000000000000001
+0x403e30:                       0x0000000000000080      0x0000000000000001
+</pre></div>
+</div></div>
+<p>The value actually stored in the hidden <code>Derived</code> instance field is <code>0x403dd0</code> (16 offset), easy to check it (after constructor exists):</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) print/x *(unsigned long long*)&amp;d
+$2 = 0x403dd0
+</pre></div>
+</div></div>
+<p>So the hidden field is a <b>VMT</b> (virtual methods table) pointer and points to <code>0x401170</code> - the very same address that was used as static address for direct call to <code>Derived::Sum</code> (<code>call 0x401170 <_ZN7Derived3SumEii></code>). This means that the first record in VMT is the address of the first virtual method <code>Sum</code>.</p>
+<div class="tip">Another pointer in VTable is worth mentioning: TI pointer (see the picture above), which stands for Type Information and actually points to RTTI (Run-Time Type Information) for the class</div>
+<h2>The call</h2>
+<p>VMT info seems redundant, why would the compiler save the address of the method (and, moreover, increase the sizes of all instances) if it can call it directly and actually does so? To find the answer, we need to modify the code a bit, changing the way we refer to the object and its methods:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">virtual_ref_call.cpp</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">Base</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">Derived</span><span class="o">:</span><span class="w"> </span><span class="n">Base</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">Derived</span><span class="w"> </span><span class="n">d</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">Base</span><span class="o">&amp;</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">d</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">Sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>The only change made is that a reference to <code>Base&</code> is used now to call <code>Sum</code> method trying to fool the compiler so it doesn't know the object type. And according to the assembler code the attempt succeeded:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">asm</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="nf">Dump</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">code</span><span class="w"> </span><span class="nv">for</span><span class="w"> </span><span class="nv">function</span><span class="w"> </span><span class="nv">main</span><span class="p">():</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401110</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">sub</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x18</span><span class="p">,</span><span class="o">%</span><span class="nb">rsp</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401114</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">4</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">movl</span><span class="w">   </span><span class="kc">$</span><span class="mh">0x0</span><span class="p">,</span><span class="mh">0x14</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040111c</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">12</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">lea</span><span class="w">    </span><span class="mh">0x8</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">rdi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401121</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">17</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">call</span><span class="w">   </span><span class="mh">0x401150</span><span class="w"> </span><span class="o">&lt;</span><span class="nv">_ZN7DerivedC2Ev</span><span class="o">&gt;</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401126</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">22</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">lea</span><span class="w">    </span><span class="mh">0x8</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">rax</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040112b</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">27</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">rax</span><span class="p">,(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040112f</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">31</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">rdi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401133</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">35</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="p">(</span><span class="o">%</span><span class="nb">rdi</span><span class="p">),</span><span class="o">%</span><span class="nb">rax</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401136</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">38</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x1</span><span class="p">,</span><span class="o">%</span><span class="nb">esi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040113b</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">43</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x2</span><span class="p">,</span><span class="o">%</span><span class="nb">edx</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401140</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">48</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">call</span><span class="w">   </span><span class="o">*</span><span class="p">(</span><span class="o">%</span><span class="nb">rax</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401142</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">50</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">add</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x18</span><span class="p">,</span><span class="o">%</span><span class="nb">rsp</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401146</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">54</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">ret</span><span class="w"></span>
+<span class="nf">End</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">dump.</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>There is no direct call to <code>Sum</code> anymore, it is replaced with indirect call <code>call *(%rax)</code>. That is, it calls whatever address is stored in dereferenced <code>%rax</code> at the moment of instruction execution. And this is the key principle of virtual method dispatch, the actual code executed as a result of such call is defined dynamically. <code>%rax</code> content at the moment of call is defined by the next operations:</p>
+<ul><li> <code>%rdi</code> (the <code>this</code> register) is initialized at the beginning of <code>main</code> via <code>lea 0x8(%rsp),%rdi</code> and retains its value</li>
+<li> <code>%rax</code> is loaded a few lines before <code>call</code> in <code>mov (%rdi),%rax</code> with dereferenced value of <code>%rdi</code>, which means the dereferenced value of <code>this</code> - first record in VMT for class <code>Derived</code></li>
+</ul><div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) print/x $pc
+$1 = 0x401140
+(gdb) p/x $rax
+$2 = 0x403dd0
+(gdb) info symbol 0x403dd0
+vtable for Derived + 16 in section .data.rel.ro of a.out
+</pre></div>
+</div></div>
+<p>So in fact <code>Derived::Sum</code> is called via VMT record even if its called via reference to base class <code>Base</code>, that is what virtual stuff exists for. The effective behavior of the object is defined by its actual type and not the way it is referred to. Any reference or pointer to any base sub-object works. Even in the case of the so-called diamond inheritance the mechanism will find a way to get the proper method address and call it</p>
+<p>To summarize:</p>
+<ul><li> each instance of a class with virtual methods has a hidden VMT pointer to corresponding record in VMT created by the compiler at compilation time</li>
+<li> VMT has a record for each virtual method of the class with the addresses of actual method implementation. Overriding a method actually means storing its address in the class's VMT and VMTs of all descendants</li>
+<li> calls of virtual methods are indirect via VMT records of the class</li>
+<li> compiler still can use direct calls for virtual methods when possible for optimization</li>
+</ul><h2>Construction and destruction</h2>
+<p>Previously in the assembler code for <code>Derived</code> constructor, <code>Base</code> constructor was called. What is important is that this call is done <b>before</b> <code>Derived</code> class sets up its VMT pointer. This is because <code>Base</code> wants to setup its own VMT pointer to its own VMT so <code>Base</code> class instances (created directly using <code>Base</code> constructor) use Base virtual methods:</p>
+
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">asm</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="nf">Dump</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">code</span><span class="w"> </span><span class="nv">for</span><span class="w"> </span><span class="nv">function</span><span class="w"> </span><span class="nv">_ZN4BaseC2Ev</span><span class="p">:</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401180</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">rdi</span><span class="p">,</span><span class="o">-</span><span class="mh">0x8</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401185</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">5</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">-</span><span class="mh">0x8</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">rax</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040118a</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">10</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">lea</span><span class="w">    </span><span class="mh">0x2c6f</span><span class="p">(</span><span class="o">%</span><span class="nv">rip</span><span class="p">),</span><span class="o">%</span><span class="nb">rcx</span><span class="w">        </span><span class="c1"># 0x403e00 &lt;_ZTV4Base&gt;</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401191</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">17</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">add</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x10</span><span class="p">,</span><span class="o">%</span><span class="nb">rcx</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401195</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">21</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">rcx</span><span class="p">,(</span><span class="o">%</span><span class="nb">rax</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401198</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">24</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">ret</span><span class="w"></span>
+<span class="nf">End</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">dump.</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p><code>Base</code> constructor uses the same mechanism <code>Derived</code> does (as shown before) to set up its VMT pointer. What about destruction? Same but in the opposite direction. To illustrate this, the code needs to be modified a bit to force the compiler to call the destructors. Additionally, call to virtual <code>Sum</code> is added into the destructors to force the compiler to add some virtual-related code there:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">virtual_dtor_call.cpp</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">Base</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="o">~</span><span class="n">Base</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">Sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">Derived</span><span class="o">:</span><span class="w"> </span><span class="n">Base</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="o">~</span><span class="n">Derived</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">Sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">Derived</span><span class="w"> </span><span class="n">d</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="n">Sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>Compacted asm code for <code>Derived</code> destructor:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">asm</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="nf">Dump</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">code</span><span class="w"> </span><span class="nv">for</span><span class="w"> </span><span class="nv">function</span><span class="w"> </span><span class="nv">_ZN7DerivedD2Ev</span><span class="p">:</span><span class="w"></span>
+<span class="w"> </span><span class="nf">.</span><span class="w"> </span><span class="nv">.</span><span class="w"> </span><span class="nv">.</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401233</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">19</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">lea</span><span class="w">    </span><span class="mh">0x2b56</span><span class="p">(</span><span class="o">%</span><span class="nv">rip</span><span class="p">),</span><span class="o">%</span><span class="nb">rax</span><span class="w">        </span><span class="c1"># 0x403d90 &lt;_ZTV7Derived+16&gt;</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040123a</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">26</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">rax</span><span class="p">,(</span><span class="o">%</span><span class="nb">rdi</span><span class="p">)</span><span class="w"></span>
+<span class="w"> </span><span class="nf">.</span><span class="w"> </span><span class="nv">.</span><span class="w"> </span><span class="nv">.</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401243</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">35</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x1</span><span class="p">,</span><span class="o">%</span><span class="nb">edx</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401248</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">40</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">edx</span><span class="p">,</span><span class="o">%</span><span class="nb">esi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040124a</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">42</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">call</span><span class="w">   </span><span class="o">*%</span><span class="nb">rax</span><span class="w"></span>
+<span class="w"> </span><span class="nf">.</span><span class="w"> </span><span class="nv">.</span><span class="w"> </span><span class="nv">.</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401256</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">54</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">call</span><span class="w">   </span><span class="mh">0x4012c0</span><span class="w"> </span><span class="o">&lt;</span><span class="nv">_ZN4BaseD2Ev</span><span class="o">&gt;</span><span class="w"></span>
+<span class="w"> </span><span class="nf">.</span><span class="w"> </span><span class="nv">.</span><span class="w"> </span><span class="nv">.</span><span class="w"></span>
+<span class="nf">End</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">dump.</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>For <code>Base</code> class:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">asm</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="nf">Dump</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">code</span><span class="w"> </span><span class="nv">for</span><span class="w"> </span><span class="nv">function</span><span class="w"> </span><span class="nv">_ZN4BaseD2Ev</span><span class="p">:</span><span class="w"></span>
+<span class="w"> </span><span class="nf">.</span><span class="w"> </span><span class="nv">.</span><span class="w"> </span><span class="nv">.</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x00000000004012c9</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">9</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">lea</span><span class="w">    </span><span class="mh">0x2b00</span><span class="p">(</span><span class="o">%</span><span class="nv">rip</span><span class="p">),</span><span class="o">%</span><span class="nb">rax</span><span class="w">        </span><span class="c1"># 0x403dd0 &lt;_ZTV4Base+16&gt;</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x00000000004012d0</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">16</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">rax</span><span class="p">,(</span><span class="o">%</span><span class="nb">rdi</span><span class="p">)</span><span class="w"></span>
+<span class="w"> </span><span class="nf">.</span><span class="w"> </span><span class="nv">.</span><span class="w"> </span><span class="nv">.</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x00000000004012d9</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">25</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="kc">$</span><span class="mh">0x1</span><span class="p">,</span><span class="o">%</span><span class="nb">edx</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x00000000004012de</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">30</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">edx</span><span class="p">,</span><span class="o">%</span><span class="nb">esi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x00000000004012e0</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">32</span><span class="o">&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">call</span><span class="w">   </span><span class="o">*%</span><span class="nb">rax</span><span class="w"></span>
+<span class="w"> </span><span class="nf">.</span><span class="w"> </span><span class="nv">.</span><span class="w"> </span><span class="nv">.</span><span class="w"></span>
+<span class="nf">End</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">dump.</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>A common pattern here, similar to what we have seen in constructors: each destructors reloads object's VMT pointer according to its class. This fact leads us to an important conclusion: construction and destruction code is always executed in the context of <b>current</b> class's VMT address (and not <a href='https://www.en.cppreference.com/w/cpp/language/objects.html#Subobjects'>the most derived</a>). A kind of a lifeline of the object's VMT pointer can be drawn as that:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">code</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>Method     | &lt;-- Creation --&gt; | &lt;-- Object usage --&gt; | &lt;-- Destruction --&gt; |   VMT pointer
+           |  Base  | Derived |                      |  Derived  |  Base   |
+                              .                      .
+Base        ────────┐         .                      .           ┌─────────   &lt;_ZTV4Base+16&gt;`
+virtual             │         .                      .           │
+                    │         .                      .           │
+Derived             └────────────────────────────────────────────┘            &lt;_ZTV7Derived+16&gt;
+override                      .                      .
+</pre></div>
+</div></div>
+<p>This may seem a bit strange at first glance and still makes sense: imagine <code>Base::~Base()</code> using VMT pointer of <code>Derived</code>. Calls to virtual methods during destruction would call overridden implementations (<code>Derived::Sum()</code> for example). But overridden methods of <code>Derived</code> were written supposing that all the <code>Derived</code> resources (variables, dynamically allocated memory or whatever was created in <code>Derived</code> constructor) are available. But this is not true during <code>Base</code> destructor execution as it is executed <b>after</b> <code>Derived</code> destructor (that could have destroyed something required for normal execution of <code>Derived</code> methods)! So the only safe way for <code>Base</code> destructor to execute virtual methods is to execute its own implementations (or any of its parents, their destruction code is not executed yet). And that is what is done via VMT pointer manipulations. Same logic applies to the constructors but in the opposite direction: <code>Base</code> constructor just can't safely call <code>Derived</code> implementations as <code>Derived</code> data may not be ready by that time. More explanation  <a href='https://isocpp.org/wiki/faq/strange-inheritance#calling-virtuals-from-ctors'>here</a>.</p>
+<p>Btw, this doesn't completely disable the virtual mechanism during construction or destruction, in the code above the calls to <code>Sum()</code> are still indirect using value from VMT. If we had a virtual method in <code>Base</code> that was <b>not</b> overridden in <code>Derived</code>, <code>Derived</code> destructor would call <code>Base</code> implementation of the method via VMT. This guarantees that the most appropriate and at the same time safe overridden version is called. We can say that during these special periods of the object's lifetime we use limited virtual calls, <b>not deeper</b> than the current sub-object's class being constructed/destructed.</p>
+<div class="tip"> This VMT manipulation may cause abstract method (if any) calls during construction or destruction. Oups...</div>
+<h3>Not only about call address</h3>
+<p>Ok, now we understand a bit more about how the appropriate <b>code</b> is selected to be executed on a virtual call. But what's about <code>this</code> for that call? Does the pointer to the object need to be somehow adjusted? Let's take a look at the following code example:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">layout.cpp</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">Base</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x0B0</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">Derived</span><span class="o">:</span><span class="w"> </span><span class="n">Base</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x0D0</span><span class="p">;</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">MoreDerived</span><span class="o">:</span><span class="w"> </span><span class="n">Derived</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">C</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x0D1</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">C</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>Here is how memory layout of <code>MoreDerived</code> will look like:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">code</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>.----------------------------------------------------------.
+| MoreDerived::VMT | Base::A | Derived::B | MoreDerived::C |
+&#39;----------------------------------------------------------&#39;
+^                  ^         ^            ^
+this               this+8    this+16      this+24
+</pre></div>
+</div></div>
+<p>After creation of an instance of <code>MoreDerived</code> the pointer <code>this</code> points at the beginning of the object memory layout. This pointer is suitable for all methods declared in <code>MoreDerived</code> because <code>MoreDerived</code> methods were generated by the compiler keeping in mind the offsets of A, B, C which never change for all objects of type <code>MoreDerived</code>. The same <code>this</code> value is suitable for all methods declared in <code>Derived</code>, because <code>Derived</code> layout is also known at compilation time and is part of <code>MoreDerived</code> layout (it is a sub-object of the most derived object of class <code>MoreDerived</code>). If we decided to create an instance of <code>Derived</code>, we would get the next layout:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">code</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>.-----------------------------------------.
+| Derived::VMT     | Base::A | Derived::B |
+&#39;-----------------------------------------&#39;
+^                  ^         ^
+this               this+8    this+16
+</pre></div>
+</div></div>
+<p>Obviously the offset of <code>Base::A</code> and <code>Derived::B</code> fields are the same for both layout mentioned above. It's a result of the strict layout rules of non-static data fields inside objects/sub-objects: for every given class (<code>MoreDerived</code>), all parent's classes (<code>Base</code>, <code>Derived</code>) fields are located strictly before the classes fields (<code>&Base::A < &MoreDerived::C</code>, <code>&Derived::B < &MoreDerived::C</code>, <code>&Base::A < &Derived::B</code>). So wherever sub-object of class <code>MoreDerived</code> is met in any object memory layout of <b>any</b> descendant of <code>MoreDerived</code>, it's field guaranteed to be prepended by the parents data fields with the same offsets in the same order. The same <code>this</code> in this case fits to call any method of the class and base classes. Trivial but must be mentioned.</p>
+
+<p>The picture changes significantly when we have multiple inheritance. Assume we have the following code:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">multiple.cpp</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">Base1</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">B1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0xB1</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum1</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">B1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">Base2</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">B2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0xB2</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">virtual</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum2</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">B2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">Derived</span><span class="o">:</span><span class="w"> </span><span class="n">Base1</span><span class="p">,</span><span class="w"> </span><span class="n">Base2</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x0D0</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">Sum2</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">B2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">Derived</span><span class="w"> </span><span class="n">d</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">Base2</span><span class="o">&amp;</span><span class="w"> </span><span class="n">db</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">d</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="n">Sum2</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">db</span><span class="p">.</span><span class="n">Sum2</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>Applying the described above to the layout of class <code>Derived</code> is not possible anymore; the <code>this</code> pointer is not common in this case. Let's review memory layouts of the classes:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">code</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>Derived
+.---------------------------------------------------.
+| Derived::VMT | Base1::B1 | Base2::B2 | Derived::D |
+&#39;---------------------------------------------------&#39;
+^                ^           ^           ^
+this             this+8      this+16     this+24
+
+Base1
+.------------------------.
+| Base1::VMT | Base1::B1 |
+&#39;------------------------&#39;
+^              ^
+this           this+8
+
+Base2
+.------------------------.
+| Base2::VMT | Base2::B2 |
+&#39;------------------------&#39;
+^              ^
+this           this+8
+</pre></div>
+</div></div>
+<p>Here the field <code>Base2::B2</code> in <code>Derived</code> layout has offset 16 while the <b>same field</b> in <code>Base2</code> layout has offset 8, which means that casting <code>Derived</code> to <code>Base2</code> will have to change <code>this</code> to be able to call <code>Base2</code> methods properly. And it does change:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) p/x &amp;d
+$1 = 0x7fffffffdcb8
+(gdb) p/x &amp;db
+$2 = 0x7fffffffdcc8
+</pre></div>
+</div></div>
+<p>According to what we know so far about virtual calls, the code above cannot work properly. The line <code>return d.Sum2(1) + db.Sum2(2)</code> calls the same implementation of <code>Sum2</code> (overridden in <code>Derived</code>) but uses different <code>this</code>.</p>
+<p>Let's figure this out. <code>d</code> memory layout:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) x/8xg &amp;d
+0x7fffffffdcb8: 0x0000000000403d68      0x00000000000000b1
+0x7fffffffdcc8: 0x0000000000403d88      0x00000000000000b2
+0x7fffffffdcd8: 0x00000000000000d0      0x00000000ffffdd80
+0x7fffffffdce8: 0x00007ffff782a1ca      0x0000000000000008
+(gdb) p sizeof(d)
+$2 = 40
+(gdb)
+</pre></div>
+</div></div>
+<p>Here the data fields with values 0xb1, 0xb2 and 0xd0 are in their expected places, VMT pointer <code>0x0000000000403d68</code> in the begin of the layout as expected, but also an unexpected value <code>0x0000000000403d88</code> that precedes <code>Base2</code> field 0xb2:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) info symbol 0x0000000000403d88
+vtable for Derived + 48 in section .data.rel.ro of a.out
+</pre></div>
+</div></div>
+<p>This unexpected value is also a vtable pointer pointing somewhere in <code>Derived</code> vtable. And this is the beginning of the <code>Base2</code> memory layout inside <code>Derived</code> memory layout (see address):</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) p/x &amp;db
+$6 = 0x7fffffffdcc8
+</pre></div>
+</div></div>
+<p>So value stored at <code>0x7fffffffdcc8</code> will be used as VMT pointer when calling virtual methods of <code>Base2</code>, redirecting the calls to the real method implementation in <code>Derived</code>. Very similar to what we have seen before but... the <code>Base2</code> sub-object has its own VMT pointer!</p>
+<p>Moving along, examining the pointer:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) x/xg 0x0000000000403d88
+0x403d88 &lt;_ZTV7Derived+48&gt;:     0x0000000000401270
+(gdb) x/xg 0x0000000000401270
+0x401270 &lt;_ZThn16_N7Derived4Sum2Ei&gt;:    0x247489f8247c8948
+(gdb) info symbol 0x0000000000401270
+non-virtual thunk to Derived::Sum2(int) in section .text of a.out
+</pre></div>
+</div></div>
+<p>This is the so-called <code>thunk</code>, a piece of code that adjusts <code>this</code> pointer to a proper value for the virtual call:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">asm</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span><span class="err">(</span><span class="nf">gdb</span><span class="p">)</span><span class="w"> </span><span class="nv">disassemble</span><span class="w"> </span><span class="mh">0x0000000000401270</span><span class="w"></span>
+<span class="nf">Dump</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">code</span><span class="w"> </span><span class="nv">for</span><span class="w"> </span><span class="nv">function</span><span class="w"> </span><span class="nv">_ZThn16_N7Derived4Sum2Ei</span><span class="p">:</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401270</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">:</span><span class="w">     </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">rdi</span><span class="p">,</span><span class="o">-</span><span class="mh">0x8</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401275</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">5</span><span class="o">&gt;</span><span class="p">:</span><span class="w">     </span><span class="nv">mov</span><span class="w">    </span><span class="o">%</span><span class="nb">esi</span><span class="p">,</span><span class="o">-</span><span class="mh">0xc</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">)</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401279</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">9</span><span class="o">&gt;</span><span class="p">:</span><span class="w">     </span><span class="nv">mov</span><span class="w">    </span><span class="o">-</span><span class="mh">0x8</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">rdi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x000000000040127e</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">14</span><span class="o">&gt;</span><span class="p">:</span><span class="w">    </span><span class="nv">add</span><span class="w">    </span><span class="kc">$</span><span class="mh">0xfffffffffffffff0</span><span class="p">,</span><span class="o">%</span><span class="nb">rdi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401282</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">18</span><span class="o">&gt;</span><span class="p">:</span><span class="w">    </span><span class="nv">mov</span><span class="w">    </span><span class="o">-</span><span class="mh">0xc</span><span class="p">(</span><span class="o">%</span><span class="nb">rsp</span><span class="p">),</span><span class="o">%</span><span class="nb">esi</span><span class="w"></span>
+<span class="err">0</span><span class="nf">x0000000000401286</span><span class="w"> </span><span class="o">&lt;+</span><span class="mi">22</span><span class="o">&gt;</span><span class="p">:</span><span class="w">    </span><span class="nv">jmp</span><span class="w">    </span><span class="mh">0x4011d0</span><span class="w"> </span><span class="o">&lt;</span><span class="nv">_ZN7Derived4Sum2Ei</span><span class="o">&gt;</span><span class="w"></span>
+<span class="nf">End</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">assembler</span><span class="w"> </span><span class="nv">dump.</span><span class="w"></span>
+</pre></div>
+</div></div>
+<p>Since the address of this piece of code is stored in VMT, it is called instead of actual method. After the adjustment is done the overridden <code>Derived</code> method <code>Sum2</code> is called using <code>jmp 0x4011d0 <_ZN7Derived4Sum2Ei></code>.</p>
+<p>The adjustment is done in <code>add $0xfffffffffffffff0,%rdi</code>, which means that <code>%rdi</code> (<code>this</code>) is shifted -16 bytes:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) p (long long)0xfffffffffffffff0
+$10 = -16
+</pre></div>
+</div></div>
+<p>And that is exactly the distance between the actual <code>Derived</code> object's <code>this</code> and <code>Base2</code> sub-object (see memory layout above)! If we take a closer look at <code>Derived</code> VMT we can notice that the same method <code>Sum2</code> has actually 2 records there:</p>
+<div class="expandable"><div class="expandable-header" onclick="toggleExpandable(this)">gdb</div><div class="expandable-content open" style="height: auto"><div class="highlight"><pre><span></span>(gdb) x/8xg 0x0000000000403d68
+                                .---- VMT for Sum1      .---- VMT for Sum2
+                                |                       |
+0x403d68 &lt;_ZTV7Derived+16&gt;:     0x0000000000401250      0x00000000004011d0
+0x403d78 &lt;_ZTV7Derived+32&gt;:     0xfffffffffffffff0      0x0000000000403db0
+                                .---- thunk for Sum2
+                                |
+0x403d88 &lt;_ZTV7Derived+48&gt;:     0x0000000000401270      0x00007ffff7e6dd28
+0x403d98 &lt;_ZTI5Base1+8&gt;:        0x000000000040200d      0x00007ffff7e6dd28
+</pre></div>
+</div></div>
+<p>One of the records points directly to <code>Derived::Sum2</code> implementation at <code>0x00000000004011d0</code>, another one points to the thunk <code>0x0000000000401270</code> which after <code>this</code> adjustment calls the same <code>Derived::Sum2</code> implementation at the same address (<code>jmp 0x4011d0 <_ZN7Derived4Sum2Ei></code>). Same call of the same address, one is done directly while the other after some preparations.</p>
+<p>This way C++ compiler prepares for a virtual call and guarantees that:</p>
+<div class="tip">It doesn't matter where in classes hierarchy the implementation of a virtual method is located, and how the object is referred to, the call will always receive the correct <code>this</code> value.</div>
+<h3>Conclusion</h3>
+<p>Virtuals are fun... and more is to come!</p>
+
+
+  </article>
+
+  <footer>
+      &copy; 2025 Sergey Malahov. <a href="article.txt">Text</a> is signed with <a href="article.txt.ots">ots</a>.
+      <br>Lincensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA</a>.
+      The files in the article are available @ <a href="https://github.com/smalahov/blog">GitHub</a>
+  </footer>
+
+</body>
+</html>

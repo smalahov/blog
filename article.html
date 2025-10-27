@@ -1,11 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=g-d16d114596"></script>
+  <script>
+      window.datalayer = window.datalayer || [];
+      function gtag(){datalayer.push(arguments);}
+      gtag('js', new date());
+
+      gtag('config', 'g-d16d114596');
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>###H1 - smalahov.com</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="syntax.css" />
+  <link rel="stylesheet" href="../syntax.css" />
   <style>
     :root {
       --bg: #f0f8ff;
@@ -109,6 +118,20 @@
       font-family: monospace;
     }
 
+    .imgdiv {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 40px;
+    }
+
+    img {
+        max-width: 100%; /* Limits the image width to the width of the container */
+        max-height: 100%; /* Limits the image height to the height of the container */
+        width: auto; /* Keeps the aspect ratio intact */
+        height: auto; /* Keeps the aspect ratio intact */
+    }
+
     .tip {
       background: var(--tip-bg);
       border-left: 4px solid var(--tip-border);
@@ -197,7 +220,7 @@
   </header>
 
   <nav>
-    <a href="index.html">&larr; Back to articles</a> |
+    <a href="../index.html">&larr; Back to articles</a> |
     <a href="###TXT">Text version</a>
   </nav>
 

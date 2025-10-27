@@ -1,6 +1,7 @@
 #!/bin/python3
 
 import os, re, sys
+import shutil
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 
@@ -76,6 +77,7 @@ class TextNode(Node):
     def _get_html_content(self):
         result = re.sub(r"`([^`]*)`", r"<code>\1</code>", self._content)
         result = re.sub(r"\*\*([^*]*)\*\*", r"<b>\1</b>", result)
+        result = re.sub(r"\<\<([^|]+)\|([^>]+.(\.jpeg|\.png))\>\>", r"</p><div class=imgdiv><img src='\2' alt='\1'></div><p>", result)
         result = re.sub(r"\<\<([^|]+)\|([^>]+)\>\>", r"<a href='\2'>\1</a>", result)
         return result
 
@@ -337,7 +339,7 @@ def parse_article(article_dir, file_name):
                 current_node._read_end()
                 article.add_node(current_node)
             else:
-                raise Exception(f"Uncomplete node {node_class.__name__} at {line_no}")
+                raise Exception(f"Incomplete node {node_class.__name__} at {line_no}")
 
         article.verify()
 
@@ -345,9 +347,9 @@ def parse_article(article_dir, file_name):
 
 
 def build_article_html(article_dir, output_dir):
-    os.makedirs(output_dir, exist_ok=True)
 
     article = parse_article(article_dir, "article.txt")
+    os.makedirs(f"{output_dir}/{article}", exist_ok=True)
 
     if len(article) < 1:
         raise Exception(f"Expected at least one node in article \"{article}\" in dir \"{article_dir}\"")
@@ -369,16 +371,16 @@ def build_article_html(article_dir, output_dir):
         result_html = template.read()
         result_html = result_html.replace("###H1", article["Title"].get_html())
         result_html = result_html.replace("###DATE", article["Date"].get_html())
-        result_html = result_html.replace("###OTS", f"{article}.txt.ots")
-        result_html = result_html.replace("###TXT", f"{article}.txt")
+        result_html = result_html.replace("###OTS", f"article.txt.ots")
+        result_html = result_html.replace("###TXT", f"article.txt")
         result_html = result_html.replace("###CONTENT", content_html)
 
-        with open(f"{output_dir}/{article}.html", "w") as result:
+        with open(f"{output_dir}/{article}/article.html", "w") as result:
             result.write(result_html)
 
-    with open(f"{output_dir}/{article}.txt", "w") as result:
+    with open(f"{output_dir}/{article}/article.txt", "w") as result:
         result.write(f"Written by: {author_name}\n")
-        result.write(f"Published: {article["Date"].get_txt()} @ {domain}\n")
+        result.write(f"Published: {article['Date'].get_txt()} @ {domain}\n")
         result.write(f"{magic}\n\n")
         result.write(content_txt)
 
@@ -393,24 +395,26 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         print(f"Options: {sys.argv[1:]}")
 
-    ots_files = [*filter(lambda x: os.path.splitext(x)[1] == ".ots", os.listdir(output_dir))]
+    ots_files = []
+    for dirpath, dirnames, filenames in os.walk(output_dir):
+        ots_files.extend(map(lambda x: f"{dirpath}/{x}", filter(lambda x: os.path.splitext(x)[1] == ".ots", filenames)))
 
     if "verify" in sys.argv:
         for file in ots_files:
-            res = os.system(f"ots verify {output_dir}/{file}");
+            res = os.system(f"ots verify {file}");
             print(f"Verify result for file {file} is {res}")
 
         sys.exit(0)
 
     if "upgrade" in sys.argv:
         for file in ots_files:
-            res = os.system(f"ots upgrade {output_dir}/{file}");
+            res = os.system(f"ots upgrade {file}");
             print(f"Upgrade result for file {file} is {res}")
 
         sys.exit(0)
 
-    if len(ots_files):
-        sys.exit(f"Some .ots files are found in {output_dir = }, delete them before building")
+    #if len(ots_files):
+    #    sys.exit(f"Some .ots files are found in {output_dir = }, delete them before building")
 
     articles = []
     with os.scandir("./") as dirs:
@@ -418,6 +422,11 @@ if __name__ == "__main__":
             print(f"Processing {article_dir.name = } ...")
             article = build_article_html(article_dir.name, output_dir)
             articles.append(article)
+            with os.scandir(f"./{article_dir.name}") as attachments:
+                for att in filter(lambda x: x.name.endswith((".png", ".jpeg")), attachments):
+                    shutil.copy(att.path, f"{output_dir}/{article}/")
+
+
 
     # Build index.html with the list of articles
     with open("index.html", "r") as template:
@@ -428,9 +437,9 @@ if __name__ == "__main__":
             articles_html += \
                 "<div class=\"article\"> " \
                 "  <div class=\"article-content\"> " \
-                f"    <h3>{article["Title"].get_html()}</h3>" \
-                f"    <p>{article["Description"].get_html()}</p>"\
-                f"<div class=\"article-meta\">Published: {article["Date"].get_html()} <a href=\"{article}.html\">Read →</a></div>" \
+                f"    <h3>{article['Title'].get_html()}</h3>" \
+                f"    <p>{article['Description'].get_html()}</p>"\
+                f"<div class=\"article-meta\">Published: {article['Date'].get_html()} <a href=\"{article}/article.html\">Read →</a></div>" \
                 "  </div>"\
                 "</div>"
 
@@ -442,8 +451,10 @@ if __name__ == "__main__":
     os.system("cp *.css dist/")
 
     if "sign" in sys.argv:
-        for file in filter(lambda x: os.path.splitext(x)[1] == ".txt", os.listdir(output_dir)):
-            print(f"Starting sign process for {file}")
-            os.system(f"ots stamp {output_dir}/{file}");
+        for dirpath, dirnames, filenames in os.walk(output_dir):
+            for file in filter(lambda x: os.path.splitext(x)[1] == ".txt", filenames):
+                if not os.path.exists(f"{dirpath}/{file}.ots"):
+                    print(f"Starting sign process for {dirpath}/{file}")
+                    os.system(f"ots stamp {dirpath}/{file}");
 
     print("Build finished.")
