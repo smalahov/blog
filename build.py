@@ -17,6 +17,8 @@ def trace(msg):
     if "debug" in sys.argv:
         print(msg)
 
+def warn(msg):
+    print(f"WARNING: {msg}")
 
 class Node:
     start_tag = None
@@ -378,11 +380,20 @@ def build_article_html(article_dir, output_dir):
         with open(f"{output_dir}/{article}/article.html", "w") as result:
             result.write(result_html)
 
-    with open(f"{output_dir}/{article}/article.txt", "w") as result:
-        result.write(f"Written by: {author_name}\n")
-        result.write(f"Published: {article['Date'].get_txt()} @ {domain}\n")
-        result.write(f"{magic}\n\n")
-        result.write(content_txt)
+    txt = f"{output_dir}/{article}/article.txt"
+
+    # For text version, omit generation if we have a signed and committed version already
+    # This is required to keep the original version of the article text and signature
+    # This omit suppose that the new version of a published article does not contain
+    # important changes that should be reflected in text version
+    if os.system(f"git ls-files | grep {txt} > /dev/null"):
+        with open(txt, "w") as result:
+            result.write(f"Written by: {author_name}\n")
+            result.write(f"Published: {article['Date'].get_txt()} @ {domain}\n")
+            result.write(f"{magic}\n\n")
+            result.write(content_txt)
+    else:
+        warn(f"File {txt} exist in output dir and committed, generation of txt format skipped.")
 
     return article
 

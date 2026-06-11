@@ -130,6 +130,7 @@
         max-height: 100%; /* Limits the image height to the height of the container */
         width: auto; /* Keeps the aspect ratio intact */
         height: auto; /* Keeps the aspect ratio intact */
+        margin: 1.5rem 0;
     }
 
     .tip {
@@ -230,10 +231,11 @@
     </div>
 
     <div class="tip">This article is not about software development but rather about some embedded and hardware stuff. PCB development files as long as firmware and software code may be found on <a href='https://github.com/smalahov/ctlpie'>GitHub</a>.</div>
+<p></p><div class=imgdiv><img src='device.png' alt='Finished device writing signals to a file'></div><p></p>
 <h2>Rationale</h2>
 <p>Digital hardware development is my hobby. I remember the time I met the microcontroller technology at the university and how impressed I was by the fact that many hardware-related tasks could be solved by just writing some code (which was my main specialization). At that time it was Atmel 51 architecture microcontroller, but soon I switched to AT90 series. The very first device i built had no RAM, only 32 8-bits registers and almost no peripheral except IO pins. Most of the chips available for enthusiasts required special programming devices to upload firmware and expensive hardware emulators to trace and debug. Oh good old (full of pain) times... Nowadays a microcontroller that costs a few dollars has 100-200Kbytes of RAM, several SPI/UART and analog interfaces, more than 100Mhz core frequency and JTAG debugging interface onboard.</p>
 <p>At some point of my life i decided to leave my hometown and start travelling. A lot of stuff like oscilloscopes, soldering station, parts boxes i had to leave taking my portable oscilloscope and a soldering iron only. That happened in 2019 and since then i struggled with prototype and evaluation boards each time i wanted to do something hardware related. All that wires, unstable contacts... and all the efforts could get multiplied by zero with a single tail move of my cat... Bruh!</p>
-<p></p><div class=imgdiv><img src='wires_and_cat.jpeg' alt='Cats like wires, wires don't like cars'></div><p></p>
+<p></p><div class=imgdiv><img src='wires_and_cat.jpeg' alt='Cats like wires, wires don't like cats'></div><p></p>
 <p>Another problem i encountered during my hobby 'career' is that when you build rare (like i do) you need to start from scratch every time you need to build something trivial and that's pretty much time consuming. You need to install some IDE, find and read some datasheets to refresh some details like IO bus power configuration and core clock options... and finally find the boards to program. I wish i had had a better development approach that would avoid this low-level stuff when i needed to build something simple. In the end of the day, I'm a software developer and the software is the only thing i work on every day and i would have been happy to utilize this knowledge for the hardware too.</p>
 <p>The motorcycle breakdown was the turning point. Contemporary vehicles are full of electronic sensors to explore and test, 2-channel oscilloscope was not enough anymore so i decided to build something for that case, something that could read a wide range of electrical signals, record them, process and provide some electrical outputs in real time.</p>
 <p>So, the aim was: when i needed a particular device, i wanted to use soldering as little as possible but at the same time avoid jumper wires, reuse existing parts form the previous uses and avoid firmware development when possible. And wanted to have everything packed in a small firm case protecting the scheme during long term storage or outdoor use. And cat proof.</p>

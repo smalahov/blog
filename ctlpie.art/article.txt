@@ -7,12 +7,16 @@ ________________________________________________________________________________
 //DESC: Building an all-in-one digital controller using modern components
 //DATE: 27 October 2025
 
+
 ```tip
 This article is not about software development but rather about some embedded and hardware stuff. PCB development files as long
 as firmware and software code may be found on <<GitHub|https://github.com/smalahov/ctlpie>>.
 ```
 
+<<Finished device writing signals to a file|device.png>>
+
 ## Rationale
+
 
 Digital hardware development is my hobby. I remember the time I met the microcontroller technology at the university
 and how impressed I was by the fact that many hardware-related tasks could be solved by just writing some code
@@ -29,7 +33,7 @@ That happened in 2019 and since then i struggled with prototype and evaluation b
 hardware related. All that wires, unstable contacts... and all the efforts could get multiplied by zero with a single
 tail move of my cat... Bruh!
 
-<<Cats like wires, wires don't like cars|wires_and_cat.jpeg>>
+<<Cats like wires, wires don't like cats|wires_and_cat.jpeg>>
 
 Another problem i encountered during my hobby 'career' is that when you build rare (like i do) you need to start from
 scratch every time you need to build something trivial and that's pretty much time consuming.
